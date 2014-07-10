@@ -23,7 +23,6 @@ from nxdrive.client import LocalClient
 from nxdrive.client import RemoteFileSystemClient
 from nxdrive.client import RemoteFilteredFileSystemClient
 from nxdrive.client import RemoteDocumentClient
-from nxdrive.client import RestAPIClient
 from nxdrive.client.base_automation_client import get_proxies_for_handler
 from nxdrive.client import NotFound
 from nxdrive.model import init_db
@@ -174,8 +173,6 @@ class Controller(object):
     This class is thread safe: instance can be shared by multiple threads
     as DB sessions and Nuxeo clients are thread locals.
     """
-
-    rest_api_client = RestAPIClient
 
     # Used for binding server / roots and managing tokens
     remote_doc_client_factory = RemoteDocumentClient
