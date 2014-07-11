@@ -352,6 +352,7 @@ class Application(QApplication):
 
     def _stop(self):
         if self._is_sync_thread_started():
+
             # A sync thread is active, first update state, icon and menu
             if self.quit_app_after_sync_stopped:
                 self.state = 'stopping'
@@ -628,8 +629,9 @@ class Application(QApplication):
                     log.debug("Received nxdrive URL scheme event: %s", url)
                     if info.get('command') == 'edit':
                         # This is a quick operation, no need to fork a QThread
-                        self.controller.launch_file_editor(
-                            info['server_url'], info['item_id'])
+                        self.controller.locally_edit(
+                            info['server_url'], info['repo'], info['doc_id'],
+                            info['filename'])
             except:
                 log.error("Error handling URL event: %s", url, exc_info=True)
         return super(Application, self).event(event)

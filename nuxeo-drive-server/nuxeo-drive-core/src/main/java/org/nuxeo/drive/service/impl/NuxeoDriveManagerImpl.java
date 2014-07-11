@@ -41,9 +41,11 @@ import org.nuxeo.drive.service.NuxeoDriveEvents;
 import org.nuxeo.drive.service.NuxeoDriveManager;
 import org.nuxeo.drive.service.SynchronizationRoots;
 import org.nuxeo.drive.service.TooManyChangesException;
+import org.nuxeo.ecm.collections.api.CollectionManager;
 import org.nuxeo.ecm.core.api.ClientException;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
+import org.nuxeo.ecm.core.api.DocumentRef;
 import org.nuxeo.ecm.core.api.IdRef;
 import org.nuxeo.ecm.core.api.IterableQueryResult;
 import org.nuxeo.ecm.core.api.PathRef;
@@ -77,6 +79,8 @@ public class NuxeoDriveManagerImpl extends DefaultComponent implements
     public static final String DRIVE_SUBSCRIPTIONS_PROPERTY = "drv:subscriptions";
 
     public static final String DOCUMENT_CHANGE_LIMIT_PROPERTY = "org.nuxeo.drive.document.change.limit";
+
+    public static final String LOCALLY_EDITED_COLLECTION_NAME = "Locally Edited";
 
     /**
      * Cache holding the synchronization roots for a given user (first map key)
@@ -414,6 +418,37 @@ public class NuxeoDriveManagerImpl extends DefaultComponent implements
     @Override
     public void setChangeFinder(FileSystemChangeFinder changeFinder) {
         this.changeFinder = changeFinder;
+    }
+
+    @Override
+    public void addToLocallyEditedCollection(CoreSession session,
+            DocumentModel doc) throws ClientException {
+
+        // Create "Locally Edited" collection if not exists
+        CollectionManager cm = Framework.getService(CollectionManager.class);
+        DocumentModel userCollections = cm.getUserDefaultCollections(doc,
+                session);
+        DocumentRef locallyEditedCollectionRef = new PathRef(
+                userCollections.getPath().toString(),
+                LOCALLY_EDITED_COLLECTION_NAME);
+        DocumentModel locallyEditedCollection = null;
+        if (session.exists(locallyEditedCollectionRef)) {
+            locallyEditedCollection = session.getDocument(locallyEditedCollectionRef);
+            cm.addToCollection(locallyEditedCollection, doc, session);
+        } else {
+            cm.addToNewCollection(LOCALLY_EDITED_COLLECTION_NAME,
+                    "Documents locally edited with Nuxeo Drive", doc, session);
+            locallyEditedCollection = session.getDocument(locallyEditedCollectionRef);
+        }
+
+        // Register "Locally Edited" collection as a synchronization root if not
+        // already the case
+        Set<IdRef> syncRootRefs = getSynchronizationRootReferences(session);
+        if (!syncRootRefs.contains(locallyEditedCollectionRef)) {
+            registerSynchronizationRoot(session.getPrincipal(),
+                    locallyEditedCollection, session);
+        }
+
     }
 
 }

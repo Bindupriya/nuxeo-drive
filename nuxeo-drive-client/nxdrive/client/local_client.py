@@ -10,6 +10,7 @@ import re
 from nxdrive.logging_config import get_logger
 from nxdrive.client.common import safe_filename
 from nxdrive.client.common import NotFound
+from nxdrive.client.common import LOCALLY_EDITED_FOLDER_NAME
 from nxdrive.client.common import DEFAULT_IGNORED_PREFIXES
 from nxdrive.client.common import DEFAULT_IGNORED_SUFFIXES
 from nxdrive.utils import normalized_path
@@ -137,6 +138,10 @@ class LocalClient(object):
         children.sort()
         for child_name in children:
             ignore = False
+
+            # Ignore "Locally edited" folder
+            if child_name.endswith(LOCALLY_EDITED_FOLDER_NAME):
+                ignore = True
 
             for suffix in self.ignored_suffixes:
                 if child_name.endswith(suffix):

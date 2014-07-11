@@ -30,6 +30,9 @@ DEVICE_DESCRIPTIONS = {
     'win32': 'Windows Desktop',
 }
 
+DOWNLOAD_TMP_FILE_PREFIX = '.'
+DOWNLOAD_TMP_FILE_SUFFIX = '.part'
+
 
 def get_proxies_for_handler(proxy_settings):
     """Return a pair containing proxy string and exceptions list"""
@@ -201,7 +204,7 @@ class BaseAutomationClient(object):
         self._remote_error = error
 
     def make_local_raise(self, error):
-        """Make RemoteFileSystemClient._do_get raise the provided exception"""
+        """Make RemoteFileSystemClient.do_get raise the provided exception"""
         self._local_error = error
 
     def fetch_api(self):
@@ -556,3 +559,46 @@ class BaseAutomationClient(object):
             if not r:
                 break
             yield r
+
+    def do_get(self, url, file_out=None):
+        headers = self._get_common_headers()
+        base_error_message = (
+            "Failed to connect to Nuxeo server %r with user %r"
+        ) % (self.server_url, self.user_id)
+        try:
+            log.trace("Calling '%s' with headers: %r", url, headers)
+            req = urllib2.Request(url, headers=headers)
+            response = self.opener.open(req, timeout=self.blob_timeout)
+
+            if file_out is not None:
+                with open(file_out, "wb") as f:
+                    while True:
+                        # Check if synchronization thread was suspended
+                        if self.check_suspended is not None:
+                            self.check_suspended('File download: %s'
+                                                 % file_out)
+                        buffer_ = response.read(FILE_BUFFER_SIZE)
+                        if buffer_ == '':
+                            break
+                        f.write(buffer_)
+                    if self._remote_error is not None:
+                        # Simulate a configurable remote (e.g. network or
+                        # server) error for the tests
+                        raise self._remote_error
+                    if self._local_error is not None:
+                        # Simulate a configurable local error (e.g. "No space
+                        # left on device") for the tests
+                        raise self._local_error
+                return None, file_out
+            else:
+                return response.read(), None
+        except urllib2.HTTPError as e:
+            if e.code == 401 or e.code == 403:
+                raise Unauthorized(self.server_url, self.user_id, e.code)
+            else:
+                e.msg = base_error_message + ": HTTP error %d" % e.code
+                raise e
+        except Exception as e:
+            if hasattr(e, 'msg'):
+                e.msg = base_error_message + ": " + e.msg
+            raise

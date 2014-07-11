@@ -49,14 +49,16 @@ def parse_edit_protocol(data_string):
         raise ValueError(
             invalid_msg + ' : scheme should be http or https')
 
-    if '/fsitem/' not in data_string:
+    if '/nxdocid/' not in data_string:
         raise ValueError(invalid_msg)
 
-    server_part, item_id = data_string.split('/fsitem/', 1)
+    server_part, doc_part = data_string.split('/repo/', 1)
     server_url = "%s://%s" % (scheme, server_part)
+    repo, doc_part = doc_part.split('/nxdocid/', 1)
+    doc_id, filename = doc_part.split('/filename/', 1)
 
-    item_id = urllib.unquote(item_id)  # unquote # sign
-    return dict(command='edit', server_url=server_url, item_id=item_id)
+    return dict(command='edit', server_url=server_url, repo=repo,
+                doc_id=doc_id, filename=filename)
 
 
 # Protocol handler registration

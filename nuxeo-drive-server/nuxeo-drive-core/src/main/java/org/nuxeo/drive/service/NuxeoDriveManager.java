@@ -150,4 +150,7 @@ public interface NuxeoDriveManager {
      */
     void invalidateSynchronizationRootsCache(String userName);
 
+    public void addToLocallyEditedCollection(CoreSession session,
+            DocumentModel doc) throws ClientException;
+
 }

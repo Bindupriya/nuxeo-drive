@@ -1689,7 +1689,7 @@ class Synchronizer(object):
             if not local_scan_is_done:
                 # Scan the local folders now to update the local DB even
                 # if the network is done so that the UI (e.g. windows shell
-                # extension can still be right)
+                # extension) can still be right
                 self.scan_local(server_binding, session=session)
             return 0
 

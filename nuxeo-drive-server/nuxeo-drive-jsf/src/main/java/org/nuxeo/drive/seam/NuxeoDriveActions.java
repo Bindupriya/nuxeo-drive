@@ -41,6 +41,7 @@ import org.jboss.seam.contexts.Context;
 import org.jboss.seam.contexts.Contexts;
 import org.jboss.seam.core.Events;
 import org.jboss.seam.international.StatusMessage;
+import org.nuxeo.common.utils.URIUtils;
 import org.nuxeo.drive.adapter.FileSystemItem;
 import org.nuxeo.drive.adapter.RootlessItemException;
 import org.nuxeo.drive.hierarchy.userworkspace.adapter.UserWorkspaceHelper;
@@ -53,6 +54,7 @@ import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.DocumentRef;
 import org.nuxeo.ecm.core.api.IdRef;
 import org.nuxeo.ecm.core.api.LifeCycleConstants;
+import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
 import org.nuxeo.ecm.core.api.impl.DocumentModelListImpl;
 import org.nuxeo.ecm.core.api.pathsegment.PathSegmentService;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
@@ -151,41 +153,37 @@ public class NuxeoDriveActions extends InputController implements Serializable {
         if (currentDocument.isFolder()) {
             return false;
         }
-        if (getCurrentSynchronizationRoot() == null) {
-            return false;
-        }
-        // Check if current document can be adapted as a FileSystemItem
-        return getCurrentFileSystemItem() != null;
+        return true;
     }
 
-    /**
-     * {@link #NXDRIVE_PROTOCOL} must be handled by a protocol handler
-     * configured on the client side (either on the browser, or on the OS).
-     *
-     * @return Drive edit URL in the form "{@link #NXDRIVE_PROTOCOL}://
-     *         {@link #PROTOCOL_COMMAND_EDIT}
-     *         /protocol/server[:port]/webappName/nxdoc/repoName/docRef"
-     * @throws ClientException
-     *
-     */
     public String getDriveEditURL() throws ClientException {
+        // TODO: handle Drive not started exception
         // Current document must be adaptable as a FileSystemItem
-        if (getCurrentFileSystemItem() == null) {
-            throw new ClientException(
-                    String.format(
-                            "Document %s (%s) is not adaptable as a FileSystemItem thus not Drive editable, \"driveEdit\" action should not be displayed.",
-                            navigationContext.getCurrentDocument().getId(),
-                            navigationContext.getCurrentDocument().getPathAsString()));
-        }
-        String fsItemId = currentFileSystemItem.getId();
+        // if (getCurrentFileSystemItem() == null) {
+        // throw new ClientException(
+        // String.format(
+        // "Document %s (%s) is not adaptable as a FileSystemItem thus not Drive editable, \"driveEdit\" action should not be displayed.",
+        // navigationContext.getCurrentDocument().getId(),
+        // navigationContext.getCurrentDocument().getPathAsString()));
+        // }
+        // String fsItemId = currentFileSystemItem.getId();
+        String docId = navigationContext.getCurrentDocument().getId();
+        String fileName = navigationContext.getCurrentDocument().getAdapter(
+                BlobHolder.class).getBlob().getFilename();
         ServletRequest servletRequest = (ServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
         String baseURL = VirtualHostHelper.getBaseURL(servletRequest);
         StringBuffer sb = new StringBuffer();
         sb.append(NXDRIVE_PROTOCOL).append("://");
         sb.append(PROTOCOL_COMMAND_EDIT).append("/");
         sb.append(baseURL.replaceFirst("://", "/"));
-        sb.append("fsitem/");
-        sb.append(fsItemId);
+        sb.append("repo/");
+        sb.append(documentManager.getRepositoryName());
+        sb.append("/nxdocid/");
+        sb.append(docId);
+        sb.append("/filename/");
+        String escapedFilename = fileName.replaceAll(
+                "(/|\\\\|\\*|<|>|\\?|\"|:|\\|)", "-");
+        sb.append(URIUtils.quoteURIPathComponent(escapedFilename, true));
         return sb.toString();
     }
 
